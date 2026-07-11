@@ -1,18 +1,18 @@
 {
-  "name": "claude-code-desktop",
+  "name": "ccos-pro-desktop",
   "private": true,
-  "version": "0.4.7",
-  "description": "Desktop coding agent workbench for Claude Code Haha.",
-  "homepage": "https://github.com/NanmiCoder/cc-haha",
+  "version": "0.1.0",
+  "description": "CCOS Pro — 多功能可扩展的综合型 Agent 系统桌面端",
+  "homepage": "https://github.com/kenszx/ccos-pro",
   "author": {
-    "name": "NanmiCoder",
-    "email": "relakkes@gmail.com"
+    "name": "CCOS Pro",
+    "email": "kenszx@github.com"
   },
   "type": "module",
   "main": "electron-dist/main.cjs",
   "build": {
-    "appId": "com.claude-code-haha.desktop",
-    "productName": "Claude Code Haha",
+    "appId": "com.ccos-pro.desktop",
+    "productName": "CCOS Pro",
     "asar": true,
     "asarUnpack": [
       "dist/**",
