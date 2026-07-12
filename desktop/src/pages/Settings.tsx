@@ -3944,6 +3944,7 @@ function AgentsSettings() {
   }
 
   return (
+    <>
     <div className="w-full min-w-0">
       {isLoading && allAgents.length === 0 ? (
         <div className="flex justify-center py-12">
@@ -4011,7 +4012,7 @@ function AgentsSettings() {
                   <span className="material-symbols-outlined text-[18px]">
                     {isCreating ? 'hourglass_top' : 'add'}
                   </span>
-                  {t('settings.agents.create')}
+                  {'Create Agent'}
                 </button>
               </div>
             </div>
@@ -4120,53 +4121,12 @@ function AgentsSettings() {
     </div>
 
     {/* Create Agent Modal */}
-    {showCreateModal && (
-      <Modal title={t('settings.agents.createTitle')} onClose={() => { setShowCreateModal(false); setCreateError(null) }}>
-        <Modal.Body>
-          <div className="flex flex-col gap-4">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t('settings.agents.fieldName')}</span>
-              <input
-                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
-                placeholder="my-custom-agent"
-                value={newAgentName}
-                onChange={(e) => setNewAgentName(e.currentTarget.value)}
-                autoFocus
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t('settings.agents.fieldDescription')}</span>
-              <input
-                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
-                placeholder="Brief description of what this agent does"
-                value={newAgentDesc}
-                onChange={(e) => setNewAgentDesc(e.currentTarget.value)}
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t('settings.agents.fieldModel')}</span>
-              <input
-                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
-                placeholder="inherit (default) or claude-sonnet-4-6, deepseek-v4-pro..."
-                value={newAgentModel}
-                onChange={(e) => setNewAgentModel(e.currentTarget.value)}
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t('settings.agents.fieldSystemPrompt')}</span>
-              <textarea
-                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] min-h-[120px] resize-y"
-                placeholder="You are a ... (optional system prompt override)"
-                value={newAgentSystemPrompt}
-                onChange={(e) => setNewAgentSystemPrompt(e.currentTarget.value)}
-              />
-            </label>
-            {createError && (
-              <p className="text-xs text-[var(--color-error)]">{createError}</p>
-            )}
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
+    <Modal
+      open={showCreateModal}
+      title={'Create Agent'}
+      onClose={() => { setShowCreateModal(false); setCreateError(null) }}
+      footer={
+        <>
           <button
             onClick={() => { setShowCreateModal(false); setCreateError(null) }}
             className="rounded-lg px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
@@ -4178,21 +4138,62 @@ function AgentsSettings() {
             disabled={!newAgentName.trim() || isCreating}
             className="rounded-lg bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
           >
-            {isCreating ? t('common.creating') : t('settings.agents.create')}
+            {isCreating ? 'Creating...' : 'Create'}
           </button>
-        </Modal.Footer>
-      </Modal>
-    )}
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">Name</span>
+          <input
+            className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
+            placeholder="my-custom-agent"
+            value={newAgentName}
+            onChange={(e) => setNewAgentName(e.currentTarget.value)}
+            autoFocus
+          />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">Description</span>
+          <input
+            className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
+            placeholder="Brief description of what this agent does"
+            value={newAgentDesc}
+            onChange={(e) => setNewAgentDesc(e.currentTarget.value)}
+          />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">Model</span>
+          <input
+            className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
+            placeholder="inherit (default) or claude-sonnet-4-6, deepseek-v4-pro..."
+            value={newAgentModel}
+            onChange={(e) => setNewAgentModel(e.currentTarget.value)}
+          />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">System Prompt</span>
+          <textarea
+            className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] min-h-[120px] resize-y"
+            placeholder="You are a ... (optional system prompt override)"
+            value={newAgentSystemPrompt}
+            onChange={(e) => setNewAgentSystemPrompt(e.currentTarget.value)}
+          />
+        </label>
+        {createError && (
+          <p className="text-xs text-[var(--color-error)]">{createError}</p>
+        )}
+      </div>
+    </Modal>
 
     {/* Delete Confirmation */}
-    {deleteConfirm && (
-      <Modal title={t('settings.agents.deleteTitle')} onClose={() => setDeleteConfirm(null)}>
-        <Modal.Body>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            {t('settings.agents.deleteConfirm', { name: deleteConfirm.agentType })}
-          </p>
-        </Modal.Body>
-        <Modal.Footer>
+    <Modal
+      open={deleteConfirm !== null}
+      title={'Delete Agent'}
+      onClose={() => setDeleteConfirm(null)}
+      footer={
+        <>
           <button
             onClick={() => setDeleteConfirm(null)}
             className="rounded-lg px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
@@ -4203,11 +4204,16 @@ function AgentsSettings() {
             onClick={() => void handleDelete()}
             className="rounded-lg bg-[var(--color-error)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
           >
-            {t('settings.agents.delete')}
+            {'Delete'}
           </button>
-        </Modal.Footer>
-      </Modal>
-    )}
+        </>
+      }
+    >
+      <p className="text-sm text-[var(--color-text-secondary)]">
+        Delete agent "{deleteConfirm?.agentType}"? This cannot be undone.
+      </p>
+    </Modal>
+    </>
   )
 }
 
