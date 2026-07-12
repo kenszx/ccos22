@@ -3865,12 +3865,22 @@ function AgentsSettings() {
     error,
     selectedAgent,
     selectedAgentReturnTab,
+    isCreating,
     fetchAgents,
     selectAgent,
+    createAgent,
+    deleteAgent,
   } = useAgentStore()
   const sessions = useSessionStore((s) => s.sessions)
   const activeSessionId = useSessionStore((s) => s.activeSessionId)
   const t = useTranslation()
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [newAgentName, setNewAgentName] = useState('')
+  const [newAgentDesc, setNewAgentDesc] = useState('')
+  const [newAgentModel, setNewAgentModel] = useState('')
+  const [newAgentSystemPrompt, setNewAgentSystemPrompt] = useState('')
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<AgentDefinition | null>(null)
 
   const activeSession = sessions.find((s) => s.id === activeSessionId)
   const currentWorkDir = activeSession?.workDir || undefined
@@ -3895,6 +3905,34 @@ function AgentsSettings() {
     if (returnTab === 'plugins') {
       useUIStore.getState().setPendingSettingsTab('plugins')
     }
+  }
+
+  const handleCreate = async () => {
+    if (!newAgentName.trim()) return
+    setCreateError(null)
+    try {
+      await createAgent({
+        name: newAgentName.trim(),
+        description: newAgentDesc.trim() || undefined,
+        model: newAgentModel.trim() || undefined,
+        systemPrompt: newAgentSystemPrompt.trim() || undefined,
+      }, currentWorkDir)
+      setShowCreateModal(false)
+      setNewAgentName('')
+      setNewAgentDesc('')
+      setNewAgentModel('')
+      setNewAgentSystemPrompt('')
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return
+    try {
+      await deleteAgent(deleteConfirm.agentType, currentWorkDir)
+      setDeleteConfirm(null)
+    } catch { /* error shown via store */ }
   }
 
   if (selectedAgent) {
@@ -3949,7 +3987,7 @@ function AgentsSettings() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 min-w-0 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 min-w-0 sm:grid-cols-4">
                 <SummaryCard
                   label={t('settings.agents.summary.totalAgents')}
                   value={String(allAgents.length)}
@@ -3964,8 +4002,17 @@ function AgentsSettings() {
                   label={t('settings.agents.summary.sources')}
                   value={String(sourceCount)}
                   icon="layers"
-                  className="col-span-2 sm:col-span-1"
                 />
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  disabled={isCreating}
+                  className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[var(--color-brand)] bg-[var(--color-brand-container)]/10 hover:bg-[var(--color-brand-container)]/20 transition-colors py-3 px-4 text-sm font-medium text-[var(--color-brand)] disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    {isCreating ? 'hourglass_top' : 'add'}
+                  </span>
+                  {t('settings.agents.create')}
+                </button>
               </div>
             </div>
           </section>
@@ -4071,6 +4118,96 @@ function AgentsSettings() {
         </div>
       )}
     </div>
+
+    {/* Create Agent Modal */}
+    {showCreateModal && (
+      <Modal title={t('settings.agents.createTitle')} onClose={() => { setShowCreateModal(false); setCreateError(null) }}>
+        <Modal.Body>
+          <div className="flex flex-col gap-4">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t('settings.agents.fieldName')}</span>
+              <input
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
+                placeholder="my-custom-agent"
+                value={newAgentName}
+                onChange={(e) => setNewAgentName(e.currentTarget.value)}
+                autoFocus
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t('settings.agents.fieldDescription')}</span>
+              <input
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
+                placeholder="Brief description of what this agent does"
+                value={newAgentDesc}
+                onChange={(e) => setNewAgentDesc(e.currentTarget.value)}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t('settings.agents.fieldModel')}</span>
+              <input
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)]"
+                placeholder="inherit (default) or claude-sonnet-4-6, deepseek-v4-pro..."
+                value={newAgentModel}
+                onChange={(e) => setNewAgentModel(e.currentTarget.value)}
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{t('settings.agents.fieldSystemPrompt')}</span>
+              <textarea
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] min-h-[120px] resize-y"
+                placeholder="You are a ... (optional system prompt override)"
+                value={newAgentSystemPrompt}
+                onChange={(e) => setNewAgentSystemPrompt(e.currentTarget.value)}
+              />
+            </label>
+            {createError && (
+              <p className="text-xs text-[var(--color-error)]">{createError}</p>
+            )}
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <button
+            onClick={() => { setShowCreateModal(false); setCreateError(null) }}
+            className="rounded-lg px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            onClick={() => void handleCreate()}
+            disabled={!newAgentName.trim() || isCreating}
+            className="rounded-lg bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {isCreating ? t('common.creating') : t('settings.agents.create')}
+          </button>
+        </Modal.Footer>
+      </Modal>
+    )}
+
+    {/* Delete Confirmation */}
+    {deleteConfirm && (
+      <Modal title={t('settings.agents.deleteTitle')} onClose={() => setDeleteConfirm(null)}>
+        <Modal.Body>
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            {t('settings.agents.deleteConfirm', { name: deleteConfirm.agentType })}
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <button
+            onClick={() => setDeleteConfirm(null)}
+            className="rounded-lg px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            onClick={() => void handleDelete()}
+            className="rounded-lg bg-[var(--color-error)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+          >
+            {t('settings.agents.delete')}
+          </button>
+        </Modal.Footer>
+      </Modal>
+    )}
   )
 }
 

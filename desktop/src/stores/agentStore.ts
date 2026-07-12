@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { agentsApi, type AgentDefinition } from '../api/agents'
+import { agentsApi, type AgentDefinition, type CreateAgentInput } from '../api/agents'
 
 export type AgentDetailReturnTab = 'agents' | 'plugins'
 
@@ -10,21 +10,25 @@ type AgentStore = {
   error: string | null
   selectedAgent: AgentDefinition | null
   selectedAgentReturnTab: AgentDetailReturnTab
+  isCreating: boolean
 
   fetchAgents: (cwd?: string) => Promise<void>
   selectAgent: (
     agent: AgentDefinition | null,
     returnTab?: AgentDetailReturnTab,
   ) => void
+  createAgent: (input: CreateAgentInput, cwd?: string) => Promise<void>
+  deleteAgent: (name: string, cwd?: string) => Promise<void>
 }
 
-export const useAgentStore = create<AgentStore>((set) => ({
+export const useAgentStore = create<AgentStore>((set, get) => ({
   activeAgents: [],
   allAgents: [],
   isLoading: false,
   error: null,
   selectedAgent: null,
   selectedAgentReturnTab: 'agents',
+  isCreating: false,
 
   fetchAgents: async (cwd) => {
     set({ isLoading: true, error: null })
@@ -42,4 +46,30 @@ export const useAgentStore = create<AgentStore>((set) => ({
       selectedAgent: agent,
       selectedAgentReturnTab: agent ? returnTab : 'agents',
     }),
+
+  createAgent: async (input, cwd) => {
+    set({ isCreating: true, error: null })
+    try {
+      await agentsApi.create(input)
+      await get().fetchAgents(cwd)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create agent'
+      set({ error: message })
+      throw error
+    } finally {
+      set({ isCreating: false })
+    }
+  },
+
+  deleteAgent: async (name, cwd) => {
+    set({ error: null })
+    try {
+      await agentsApi.delete(name)
+      await get().fetchAgents(cwd)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete agent'
+      set({ error: message })
+      throw error
+    }
+  },
 }))
