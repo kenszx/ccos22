@@ -1,0 +1,100 @@
+name: Build Desktop (macOS Intel + Windows)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build'
+        required: false
+        default: 'master'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-desktop-simple-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-13
+            builder_args: --mac dmg zip --x64
+            label: macOS-Intel-x64
+            smoke_platform: macos
+            arch: x64
+          - platform: windows-latest
+            builder_args: --win nsis --x64
+            label: Windows-x64
+            smoke_platform: windows
+            arch: x64
+
+    runs-on: ${{ matrix.platform }}
+    name: Build (${{ matrix.label }})
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install root dependencies
+        run: bun install
+
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: bun install
+
+      - name: Install adapter dependencies
+        working-directory: adapters
+        run: bun install
+
+      - name: Build sidecars
+        working-directory: desktop
+        env:
+          BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-install-cache
+          SIDECAR_TARGET_TRIPLE: ${{ matrix.platform == 'macos-13' && 'x86_64-apple-darwin' || 'x86_64-pc-windows-msvc' }}
+        run: bun run build:sidecars
+
+      - name: Build renderer and Electron bundles
+        working-directory: desktop
+        run: |
+          bun run build
+          bun run build:electron
+
+      - name: Build unsigned Electron release artifacts
+        working-directory: desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: node ./node_modules/electron-builder/out/cli/cli.js ${{ matrix.builder_args }} --publish never
+
+      - name: List build artifacts
+        shell: bash
+        working-directory: desktop/build-artifacts/electron
+        run: ls -lah
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-build-${{ matrix.label }}
+          path: |
+            desktop/build-artifacts/electron/*.dmg
+            desktop/build-artifacts/electron/*.zip
+            desktop/build-artifacts/electron/*.exe
+            desktop/build-artifacts/electron/*.blockmap
+          if-no-files-found: error
