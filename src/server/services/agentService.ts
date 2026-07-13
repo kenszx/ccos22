@@ -105,6 +105,12 @@ export class AgentService {
     }
 
     await this.writeAgentFile(mdPath, agent)
+    // Verify the file was written successfully
+    try {
+      await fs.access(mdPath)
+    } catch {
+      throw ApiError.internal(`Agent file was not created: ${mdPath}`)
+    }
   }
 
   /** 更新 Agent */

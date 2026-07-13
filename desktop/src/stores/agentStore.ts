@@ -51,6 +51,10 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     set({ isCreating: true, error: null })
     try {
       await agentsApi.create(input)
+      // Force refresh: fetch twice to ensure server cache is cleared
+      await get().fetchAgents(cwd)
+      // Small delay for filesystem sync, then refresh again
+      await new Promise(r => setTimeout(r, 300))
       await get().fetchAgents(cwd)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create agent'
