@@ -601,6 +601,8 @@ function normalizeStoredSettings(value: unknown): StoredH5AccessSettings {
 
 export class H5AccessService {
   private managedSettingsService = new ManagedSettingsService()
+  /** Cache: token hash → profile name. Cleared on profile switch. */
+  private tokenToProfile = new Map<string, string | null>()
 
   private async readStoredSettings(): Promise<{
     managedSettings: Record<string, unknown>
@@ -611,6 +613,30 @@ export class H5AccessService {
       managedSettings,
       h5Access: normalizeStoredSettings(managedSettings.h5Access),
     }
+  }
+
+  /** Check token against a specific profile's managed settings. */
+  private async checkTokenForProfile(
+    token: string,
+    profileDir: string,
+  ): Promise<boolean> {
+    try {
+      const { existsSync, readFileSync } = require('fs')
+      const { join } = require('path')
+      const configPath = join(profileDir, 'cc-haha', 'settings.json')
+      if (!existsSync(configPath)) return false
+      const raw = readFileSync(configPath, 'utf-8')
+      const parsed = JSON.parse(raw)
+      const h5 = normalizeStoredSettings(parsed?.h5Access)
+      return h5.enabled && h5.tokenHash === hashToken(token)
+    } catch {
+      return false
+    }
+  }
+
+  /** Clear the token→profile cache (e.g., after profile switch). */
+  clearTokenCache(): void {
+    this.tokenToProfile.clear()
   }
 
   private async setToken(
@@ -776,12 +802,39 @@ export class H5AccessService {
       return false
     }
 
-    const { h5Access } = await this.readStoredSettings()
-    if (!h5Access.enabled || !h5Access.tokenHash) {
-      return false
+    const tokenHash = hashToken(token)
+
+    // Check cache first
+    if (this.tokenToProfile.has(tokenHash)) {
+      return this.tokenToProfile.get(tokenHash) !== null
     }
 
-    return hashToken(token) === h5Access.tokenHash
+    // Fast path: check active profile
+    const { h5Access } = await this.readStoredSettings()
+    if (h5Access.enabled && h5Access.tokenHash === tokenHash) {
+      this.tokenToProfile.set(tokenHash, 'active')
+      return true
+    }
+
+    // Fallback: scan all profiles (supports cross-profile H5 persistence)
+    try {
+      const { listProfiles, getProfilePath } =
+        require('../../utils/profileEngine.js') as typeof import('../../utils/profileEngine.js')
+      const profiles = listProfiles()
+      for (const [name] of Object.entries(profiles.profiles)) {
+        const profileDir = getProfilePath(name)
+        const matched = await this.checkTokenForProfile(token, profileDir)
+        if (matched) {
+          this.tokenToProfile.set(tokenHash, name)
+          return true
+        }
+      }
+    } catch {
+      // profileEngine not available — fall through
+    }
+
+    this.tokenToProfile.set(tokenHash, null)
+    return false
   }
 
   async isOriginAllowed(origin: string | null | undefined): Promise<boolean> {

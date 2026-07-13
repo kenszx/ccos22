@@ -57,8 +57,11 @@ export async function handleProfilesApi(
       try {
         const { getClaudeConfigHomeDir } = require('../../utils/envUtils.js') as typeof import('../../utils/envUtils.js')
         const { getAgentDefinitionsWithOverrides } = require('../../tools/AgentTool/loadAgentsDir.js') as typeof import('../../tools/AgentTool/loadAgentsDir.js')
+        const { H5AccessService } = require('../../services/h5AccessService.js') as typeof import('../../services/h5AccessService.js')
         getClaudeConfigHomeDir.cache.clear?.()
         getAgentDefinitionsWithOverrides.cache.clear?.()
+        const h5 = new H5AccessService()
+        h5.clearTokenCache()
       } catch { /* caches may not be importable from API context */ }
       return Response.json({ path: newPath, active: body.name })
     }

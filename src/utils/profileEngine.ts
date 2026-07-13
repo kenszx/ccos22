@@ -168,6 +168,11 @@ export function getActiveProfile(): ProfileEntry {
   return registry.profiles[registry.active] ?? registry.profiles[DEFAULT_PROFILE]
 }
 
+/** Get a specific profile's data directory path by name. */
+export function getProfilePath(name: string): string {
+  return join(PROFILES_DIR, name)
+}
+
 /**
  * Migrate: if ~/.claude/ exists but ~/.ccos/profiles/default/ doesn't,
  * offer to migrate by setting CLAUDE_CONFIG_DIR to ~/.ccos/profiles/default/.
