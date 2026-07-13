@@ -8,6 +8,7 @@ import { handleModelsApi } from './api/models.js'
 import { handleScheduledTasksApi } from './api/scheduled-tasks.js'
 import { handleSearchApi } from './api/search.js'
 import { handleAgentsApi } from './api/agents.js'
+import { handleProfilesApi } from './api/profiles.js'
 import { handleStatusApi } from './api/status.js'
 import { handleConversationsApi } from './api/conversations.js'
 import { handleTeamsApi } from './api/teams.js'
@@ -68,6 +69,9 @@ export async function handleApiRequest(req: Request, url: URL): Promise<Response
     case 'agents':
     case 'tasks':
       return handleAgentsApi(req, url, segments)
+
+    case 'profiles':
+      return handleProfilesApi(req, url, segments)
 
     case 'status':
       return handleStatusApi(req, url, segments)

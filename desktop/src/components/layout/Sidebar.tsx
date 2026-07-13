@@ -12,7 +12,6 @@ import { useChatStore } from '../../stores/chatStore'
 import { useOpenTargetStore } from '../../stores/openTargetStore'
 import { desktopUiPreferencesApi, type SidebarProjectPreferences } from '../../api/desktopUiPreferences'
 import { getDesktopHost } from '../../lib/desktopHost'
-import { publicAssetPath } from '../../lib/publicAsset'
 import { hasRunningBackgroundTasks } from '../../lib/backgroundTasks'
 
 const desktopHost = getDesktopHost()
@@ -39,6 +38,107 @@ type ProjectGroup = {
   subtitle: string | null
   workDir: string | undefined
   sessions: SessionListItem[]
+}
+
+// ─── Profile Switcher ──────────────────────────────────────
+
+function ProfileSwitcher({ expanded }: { expanded: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [profiles, setProfiles] = useState<Array<{ name: string; displayName: string; icon?: string; active: boolean }>>([])
+  const [activeName, setActiveName] = useState('Default')
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // Lazy-load profiles to avoid importing profile API at module level
+    import('../../api/profiles').then(({ profilesApi }) => {
+      profilesApi.list().then((data) => {
+        setProfiles(data.profiles)
+        setActiveName(data.active?.displayName || 'Default')
+      }).catch(() => {
+        // Server may not have profiles API yet
+      })
+    })
+  }, [])
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleSwitch = async (name: string) => {
+    const { profilesApi } = await import('../../api/profiles')
+    await profilesApi.switch(name)
+    setActiveName(profiles.find((p) => p.name === name)?.displayName || name)
+    setProfiles((prev) =>
+      prev.map((p) => ({ ...p, active: p.name === name })),
+    )
+    setOpen(false)
+    // Reload to pick up new data directory
+    window.location.reload()
+  }
+
+  const firstIcon = activeName.slice(0, 1).toUpperCase()
+
+  return (
+    <div ref={ref} className="relative">
+      <div className={`flex items-center ${expanded ? 'gap-2.5' : 'justify-center'}`}>
+        <button
+          onClick={() => setOpen(!open)}
+          className="flex items-center gap-2.5 rounded-xl p-1.5 transition-colors hover:bg-[var(--color-surface-hover)]"
+          title={`Profile: ${activeName}`}
+        >
+          <div className="h-8 w-8 flex-shrink-0 rounded-full bg-[var(--color-brand)] flex items-center justify-center text-sm font-bold text-white">
+            {firstIcon}
+          </div>
+          <span
+            className={`sidebar-copy ${expanded ? 'sidebar-copy--visible' : 'sidebar-copy--hidden'} text-[13px] font-semibold tracking-tight text-[var(--color-text-primary)]`}
+            style={{ fontFamily: 'var(--font-headline)' }}
+          >
+            {activeName}
+          </span>
+          <ChevronDown
+            className={`sidebar-copy ${expanded ? 'sidebar-copy--visible' : 'sidebar-copy--hidden'} h-3.5 w-3.5 text-[var(--color-text-tertiary)] transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </button>
+      </div>
+
+      {open && (
+        <div className={`absolute ${expanded ? 'left-0 top-full mt-1 w-56' : 'left-full top-0 ml-2 w-56'} z-50 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg overflow-hidden`}>
+          <div className="px-3 py-2 border-b border-[var(--color-border)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">Profiles</p>
+          </div>
+          <div className="py-1">
+            {profiles.map((p) => (
+              <button
+                key={p.name}
+                onClick={() => p.active ? setOpen(false) : handleSwitch(p.name)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${
+                  p.active
+                    ? 'bg-[var(--color-brand-container)]/10 text-[var(--color-brand)] font-medium'
+                    : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]'
+                }`}
+              >
+                <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                  p.active ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-surface-container-high)] text-[var(--color-text-secondary)]'
+                }`}>
+                  {(p.icon || p.displayName).slice(0, 1).toUpperCase()}
+                </div>
+                <div className="flex-1 text-left min-w-0">
+                  <p className="truncate">{p.displayName}</p>
+                </div>
+                {p.active && (
+                  <Check className="h-4 w-4 flex-shrink-0" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 type SidebarProps = {
@@ -609,27 +709,7 @@ export function Sidebar({ isMobile = false, onRequestClose }: SidebarProps) {
         className={`px-3 pb-2 ${isDesktopRuntime && !isWindows ? 'pt-[44px]' : 'pt-3'}`}
       >
         <div className={`flex ${expanded ? 'items-center justify-between gap-3' : 'flex-col items-center gap-2'}`}>
-          <div className={`flex min-w-0 items-center ${expanded ? 'gap-2.5' : 'justify-center'}`}>
-            <img src={publicAssetPath('app-icon.png')} alt="" className="h-8 w-8 flex-shrink-0" />
-            <span
-              className={`sidebar-copy ${expanded ? 'sidebar-copy--visible' : 'sidebar-copy--hidden'} text-[13px] font-semibold tracking-tight text-[var(--color-text-primary)]`}
-              style={{ fontFamily: 'var(--font-headline)' }}
-            >
-              Claude Code <span className="text-[var(--color-primary-container)]">Haha</span>
-            </span>
-          </div>
-          <div className={`flex items-center ${expanded ? 'gap-1.5' : 'flex-col gap-2'}`}>
-            <a
-              href="https://github.com/NanmiCoder/cc-haha"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`sidebar-copy ${expanded ? 'sidebar-copy--visible' : 'sidebar-copy--hidden'} inline-flex items-center justify-center rounded-md p-1 text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface-hover)]`}
-              title="GitHub"
-              tabIndex={expanded ? undefined : -1}
-              aria-hidden={!expanded}
-            >
-              <GitHubIcon />
-            </a>
+          <ProfileSwitcher expanded={expanded} />
             {isMobile ? (
               <button
                 type="button"
@@ -654,7 +734,6 @@ export function Sidebar({ isMobile = false, onRequestClose }: SidebarProps) {
             )}
           </div>
         </div>
-      </div>
 
       <div className={`px-3 pb-3 flex flex-col ${expanded ? 'gap-0.5' : 'items-center gap-2'}`}>
         <NavItem
@@ -1932,14 +2011,6 @@ function formatRelativeTime(
   const day = Math.floor(hr / 24)
   if (day < 30) return t('session.timeDays', { n: day })
   return new Intl.DateTimeFormat(undefined, { month: 'numeric', day: 'numeric' }).format(date)
-}
-
-function GitHubIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
-    </svg>
-  )
 }
 
 function PlusIcon() {

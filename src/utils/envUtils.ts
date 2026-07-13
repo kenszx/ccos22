@@ -2,15 +2,34 @@ import memoize from 'lodash-es/memoize.js'
 import { homedir } from 'os'
 import { join } from 'path'
 
-// Memoized: 150+ callers, many on hot paths. Keyed off CLAUDE_CONFIG_DIR so
-// tests that change the env var get a fresh value without explicit cache.clear.
+// Memoized: 150+ callers. Cache keyed on CLAUDE_CONFIG_DIR + active profile
+// so profile switches invalidate the cache without explicit cache.clear.
 export const getClaudeConfigHomeDir = memoize(
   (): string => {
-    return (
-      process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude')
-    ).normalize('NFC')
+    // Test override: CLAUDE_CONFIG_DIR takes absolute priority
+    if (process.env.CLAUDE_CONFIG_DIR) {
+      return process.env.CLAUDE_CONFIG_DIR.normalize('NFC')
+    }
+    // CCOS Profile: use active profile's data directory
+    try {
+      const { getProfileConfigHomeDir } =
+        require('./profileEngine.js') as typeof import('./profileEngine.js')
+      return getProfileConfigHomeDir().normalize('NFC')
+    } catch {
+      // Fallback: classic ~/.claude for backward compatibility
+      return join(homedir(), '.claude').normalize('NFC')
+    }
   },
-  () => process.env.CLAUDE_CONFIG_DIR,
+  () => {
+    if (process.env.CLAUDE_CONFIG_DIR) return process.env.CLAUDE_CONFIG_DIR
+    try {
+      const { getActiveProfileName } =
+        require('./profileEngine.js') as typeof import('./profileEngine.js')
+      return `profile:${getActiveProfileName()}`
+    } catch {
+      return 'legacy'
+    }
+  },
 )
 
 export function getTeamsDir(): string {
