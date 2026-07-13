@@ -2144,6 +2144,59 @@ function WorkspaceSettings() {
   )
 }
 
+// ─── Mode Toggles ─────────────────────────────────────────
+
+function CoordinatorToggle() {
+  const [enabled, setEnabled] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    import('../api/settings').then(({ settingsApi }) => {
+      settingsApi.getUser().then((s: any) => {
+        setEnabled(s?.env?.CLAUDE_CODE_COORDINATOR_MODE === '1')
+      }).catch(() => {}).finally(() => setLoading(false))
+    })
+  }, [])
+
+  const toggle = async (on: boolean) => {
+    setEnabled(on)
+    try {
+      const { settingsApi } = await import('../api/settings')
+      const user = await settingsApi.getUser()
+      const env = { ...(user?.env || {}), CLAUDE_CODE_COORDINATOR_MODE: on ? '1' : '' }
+      await settingsApi.updateUser({ env })
+    } catch { setEnabled(!on) }
+  }
+
+  if (loading) return null
+
+  return (
+    <label className="relative flex items-start gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-container-low)] px-4 py-3 cursor-pointer hover:border-[var(--color-border-focus)] transition-colors">
+      <input type="checkbox" checked={enabled} onChange={(e) => toggle(e.target.checked)} className={SETTINGS_CHECKBOX_INPUT_CLASS} />
+      <SettingsCheckboxMark checked={enabled} />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium text-[var(--color-text-primary)]">Enable Coordinator</div>
+        <div className="text-xs text-[var(--color-text-tertiary)] mt-1 leading-5">
+          {enabled ? 'Main brain mode — dispatches sub-agents. (Restart to apply changes)' : 'Normal agent mode. Turn on for complex multi-step tasks.'}
+        </div>
+      </div>
+    </label>
+  )
+}
+
+function ProactiveToggle() {
+  return (
+    <label className="relative flex items-start gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-container-low)] px-4 py-3 cursor-pointer hover:border-[var(--color-border-focus)] transition-colors">
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium text-[var(--color-text-primary)]">Enable Proactive</div>
+        <div className="text-xs text-[var(--color-text-tertiary)] mt-1 leading-5">
+          Type <code className="px-1 py-0.5 rounded bg-[var(--color-surface)] text-xs">/proactive</code> in the chat to toggle autonomous mode. Agent will work continuously without waiting for confirmation after each step.
+        </div>
+      </div>
+    </label>
+  )
+}
+
 // ─── General Settings ──────────────────────────────────────
 
 export function GeneralSettings() {
@@ -2884,6 +2937,18 @@ export function GeneralSettings() {
             </div>
           </div>
         </label>
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-base font-semibold text-[var(--color-text-primary)] mb-1">Coordinator Mode</h2>
+        <p className="text-sm text-[var(--color-text-tertiary)] mb-3">Main brain mode: the session becomes an orchestrator that dispatches sub-agents for parallel work. Best for complex multi-step tasks.</p>
+        <CoordinatorToggle />
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-base font-semibold text-[var(--color-text-primary)] mb-1">Proactive Mode</h2>
+        <p className="text-sm text-[var(--color-text-tertiary)] mb-3">Autonomous mode: the agent works continuously toward a goal without waiting for your input after each step.</p>
+        <ProactiveToggle />
       </div>
 
       <div className="mt-8">
