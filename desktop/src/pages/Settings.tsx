@@ -2022,6 +2022,7 @@ function ProviderFormModal({ open, onClose, mode, provider, presets }: ProviderF
 function WorkspaceSettings() {
   const sessions = useSessionStore((s) => s.sessions)
   const activeSessionId = useSessionStore((s) => s.activeSessionId)
+  const [showGuide, setShowGuide] = useState(false)
   const [workspaces, setWorkspaces] = useState<Array<{ path: string; name: string; sessionCount: number }>>([])
 
   useEffect(() => {
@@ -2068,15 +2069,13 @@ function WorkspaceSettings() {
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
         <div className="px-5 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-container-low)] flex items-center justify-between">
           <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Workspace List</h4>
-          <Button size="sm" onClick={() => {
-            const el = document.getElementById('workspace-guide')
-            if (el) el.classList.toggle('hidden')
-          }}>
+          <Button size="sm" onClick={() => setShowGuide(!showGuide)}>
             <span className="material-symbols-outlined text-[16px]">add</span>
             {'New Workspace'}
           </Button>
         </div>
-        <div id="workspace-guide" className="hidden px-5 py-4 border-b border-[var(--color-border)] bg-[var(--color-brand-container)]/5">
+        {showGuide && (
+        <div className="px-5 py-4 border-b border-[var(--color-border)] bg-[var(--color-brand-container)]/5">
           <div className="text-xs text-[var(--color-text-secondary)] space-y-2">
             <p className="font-medium">Creating a new workspace:</p>
             <p>A workspace is a directory. To create one:</p>
@@ -2088,6 +2087,7 @@ function WorkspaceSettings() {
             <p className="text-[var(--color-text-tertiary)]">For complete data isolation (different API keys, agents, memory), create a <b>Profile</b> using the avatar menu in the top-left corner.</p>
           </div>
         </div>
+        )}
         {workspaces.length === 0 ? (
           <div className="text-center py-12 px-4">
             <span className="material-symbols-outlined text-[40px] text-[var(--color-text-tertiary)] mb-3 block">dashboard</span>

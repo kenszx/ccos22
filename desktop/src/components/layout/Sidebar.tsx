@@ -79,8 +79,15 @@ function ProfileSwitcher({ expanded }: { expanded: boolean }) {
       prev.map((p) => ({ ...p, active: p.name === name })),
     )
     setOpen(false)
-    // Reload to pick up new data directory
-    window.location.reload()
+    // Refresh data without reloading page — prevents session loss
+    try {
+      const { useSessionStore } = await import('../../stores/sessionStore')
+      const { useSettingsStore } = await import('../../stores/settingsStore')
+      const { useAgentStore } = await import('../../stores/agentStore')
+      useSessionStore.getState().fetchSessions()
+      useSettingsStore.getState().fetchAll()
+      useAgentStore.getState().fetchAgents()
+    } catch { /* stores will pick up new data on next interaction */ }
   }
 
   const firstIcon = activeName.slice(0, 1).toUpperCase()
