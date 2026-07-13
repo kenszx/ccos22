@@ -601,8 +601,8 @@ function normalizeStoredSettings(value: unknown): StoredH5AccessSettings {
 
 export class H5AccessService {
   private managedSettingsService = new ManagedSettingsService()
-  /** Cache: token hash → profile name. Cleared on profile switch. */
-  private tokenToProfile = new Map<string, string | null>()
+  /** Global cache: token hash → profile name. Shared across all instances. Cleared on profile switch. */
+  private static tokenToProfile = new Map<string, string | null>()
 
   private async readStoredSettings(): Promise<{
     managedSettings: Record<string, unknown>
@@ -636,7 +636,7 @@ export class H5AccessService {
 
   /** Clear the token→profile cache (e.g., after profile switch). */
   clearTokenCache(): void {
-    this.tokenToProfile.clear()
+    H5AccessService.tokenToProfile.clear()
   }
 
   private async setToken(
@@ -676,17 +676,19 @@ export class H5AccessService {
   async enable(): Promise<H5AccessEnableResult> {
     // Re-enabling keeps the existing token (issue #767: a stable token means
     // phones that already paired keep working). Use regenerateToken to rotate.
-    return this.managedSettingsService.updateSettings(async (current) => {
+    const result = await this.managedSettingsService.updateSettings(async (current) => {
       return this.setToken(current, normalizeStoredSettings(current.h5Access), {
         reuseExistingToken: true,
       })
     })
+    this.clearTokenCache()
+    return result
   }
 
   async disable(): Promise<H5AccessSettings> {
     // Keep the token so a later re-enable restores access for already-paired
     // phones. While disabled, validateToken rejects everything regardless.
-    return this.managedSettingsService.updateSettings(async (current) => {
+    const result = await this.managedSettingsService.updateSettings(async (current) => {
       const h5Access = normalizeStoredSettings(current.h5Access)
       const nextSettings: StoredH5AccessSettings = {
         ...h5Access,
@@ -701,14 +703,18 @@ export class H5AccessService {
         result: toPublicSettings(nextSettings),
       }
     })
+    this.clearTokenCache()
+    return result
   }
 
   async regenerateToken(): Promise<H5AccessEnableResult> {
-    return this.managedSettingsService.updateSettings(async (current) => {
+    const result = await this.managedSettingsService.updateSettings(async (current) => {
       return this.setToken(current, normalizeStoredSettings(current.h5Access), {
         reuseExistingToken: false,
       })
     })
+    this.clearTokenCache()
+    return result
   }
 
   async updateSettings(input: {
@@ -717,7 +723,7 @@ export class H5AccessService {
     fixedPort?: number | null
     disconnectGraceSeconds?: number | null
   }): Promise<H5AccessSettings> {
-    return this.managedSettingsService.updateSettings(async (current) => {
+    const result = await this.managedSettingsService.updateSettings(async (current) => {
       const h5Access = normalizeStoredSettings(current.h5Access)
       let nextPublicBaseUrl: string | null
       if (input.publicBaseUrl === undefined) {
@@ -778,6 +784,8 @@ export class H5AccessService {
         result: toPublicSettings(nextSettings),
       }
     })
+    this.clearTokenCache()
+    return result
   }
 
   async getDiagnostics(): Promise<H5AccessDiagnostics> {
@@ -805,35 +813,20 @@ export class H5AccessService {
     const tokenHash = hashToken(token)
 
     // Check cache first
-    if (this.tokenToProfile.has(tokenHash)) {
-      return this.tokenToProfile.get(tokenHash) !== null
+    if (H5AccessService.tokenToProfile.has(tokenHash)) {
+      return H5AccessService.tokenToProfile.get(tokenHash) !== null
     }
 
-    // Fast path: check active profile
+    // Strict: only check the ACTIVE profile's token.
+    // Cross-profile token validation is intentionally disabled to enforce
+    // data isolation between profiles.
     const { h5Access } = await this.readStoredSettings()
     if (h5Access.enabled && h5Access.tokenHash === tokenHash) {
-      this.tokenToProfile.set(tokenHash, 'active')
+      H5AccessService.tokenToProfile.set(tokenHash, 'active')
       return true
     }
 
-    // Fallback: scan all profiles (supports cross-profile H5 persistence)
-    try {
-      const { listProfiles, getProfilePath } =
-        require('../../utils/profileEngine.js') as typeof import('../../utils/profileEngine.js')
-      const profiles = listProfiles()
-      for (const [name] of Object.entries(profiles.profiles)) {
-        const profileDir = getProfilePath(name)
-        const matched = await this.checkTokenForProfile(token, profileDir)
-        if (matched) {
-          this.tokenToProfile.set(tokenHash, name)
-          return true
-        }
-      }
-    } catch {
-      // profileEngine not available — fall through
-    }
-
-    this.tokenToProfile.set(tokenHash, null)
+    H5AccessService.tokenToProfile.set(tokenHash, null)
     return false
   }
 

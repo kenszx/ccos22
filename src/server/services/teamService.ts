@@ -81,7 +81,14 @@ type TeamFileRaw = {
 
 export class TeamService {
   private getConfigDir(): string {
-    return process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude')
+    if (process.env.CLAUDE_CONFIG_DIR) return process.env.CLAUDE_CONFIG_DIR
+    try {
+      const { getProfileConfigHomeDir } =
+        require('../../utils/profileEngine.js') as typeof import('../../utils/profileEngine.js')
+      return getProfileConfigHomeDir()
+    } catch {
+      return path.join(os.homedir(), '.claude')
+    }
   }
 
   private getTeamsDir(): string {

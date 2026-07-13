@@ -151,8 +151,18 @@ export class SearchService {
     const matchesPerSession =
       options?.matchesPerSession ?? SESSION_SEARCH_DEFAULT_MATCHES_PER_SESSION
 
-    const configDir =
-      process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude')
+    let configDir: string
+    if (process.env.CLAUDE_CONFIG_DIR) {
+      configDir = process.env.CLAUDE_CONFIG_DIR
+    } else {
+      try {
+        const { getProfileConfigHomeDir } =
+          require('../../utils/profileEngine.js') as typeof import('../../utils/profileEngine.js')
+        configDir = getProfileConfigHomeDir()
+      } catch {
+        configDir = path.join(os.homedir(), '.claude')
+      }
+    }
     const projectsDir = path.join(configDir, 'projects')
 
     try {

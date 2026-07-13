@@ -38,7 +38,14 @@ export class SettingsService {
 
   /** 配置目录，支持通过环境变量覆盖（便于测试） */
   private getConfigDir(): string {
-    return process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude')
+    if (process.env.CLAUDE_CONFIG_DIR) return process.env.CLAUDE_CONFIG_DIR
+    try {
+      const { getProfileConfigHomeDir } =
+        require('../../utils/profileEngine.js') as typeof import('../../utils/profileEngine.js')
+      return getProfileConfigHomeDir()
+    } catch {
+      return path.join(os.homedir(), '.claude')
+    }
   }
 
   /** 用户级设置文件路径 */

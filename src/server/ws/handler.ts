@@ -2578,6 +2578,26 @@ function hasActiveClients(sessionId: string): boolean {
   return (activeSessions.get(sessionId)?.size ?? 0) > 0
 }
 
+/**
+ * Close all client WebSocket connections.
+ * Called during profile switch to force H5/desktop clients to reconnect
+ * with the new profile's token and context.
+ */
+export function closeAllClientConnections(reason: string): void {
+  for (const [sessionId, clients] of activeSessions.entries()) {
+    for (const ws of clients) {
+      try {
+        ws.close(1001, reason)
+      } catch {
+        // ignore
+      }
+    }
+    clients.clear()
+  }
+  activeSessions.clear()
+  console.log(`[WS] All client connections closed: ${reason}`)
+}
+
 function removeClientOutputCallback(ws: ServerWebSocket<WebSocketData>): void {
   const entry = clientOutputCallbacks.get(ws)
   if (!entry) return

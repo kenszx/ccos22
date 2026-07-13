@@ -166,6 +166,18 @@ export class ConversationService {
   private deletedSessions = new Set<string>()
   private providerService = new ProviderService()
 
+  /** Resolve the active profile's config directory (sync). */
+  private getConfigDir(): string {
+    if (process.env.CLAUDE_CONFIG_DIR) return process.env.CLAUDE_CONFIG_DIR
+    try {
+      const { getProfileConfigHomeDir } =
+        require('../../utils/profileEngine.js') as typeof import('../../utils/profileEngine.js')
+      return getProfileConfigHomeDir()
+    } catch {
+      return path.join(os.homedir(), '.claude')
+    }
+  }
+
   private buildSessionCliArgs(
     sessionId: string,
     sdkUrl: string,
@@ -1142,8 +1154,20 @@ export class ConversationService {
       // Diagnostics must never block session startup.
     }
 
+    // Ensure the CLI subprocess reads/writes session data in the correct
+    // per-profile directory instead of inheriting the server's default.
+    let profileConfigDir: string | undefined
+    try {
+      const { getProfileConfigHomeDir } =
+        require('../../utils/profileEngine.js') as typeof import('../../utils/profileEngine.js')
+      profileConfigDir = getProfileConfigHomeDir()
+    } catch {
+      // profileEngine not available — fall back to cleanEnv / default
+    }
+
     return {
       ...cleanEnv,
+      ...(profileConfigDir ? { CLAUDE_CONFIG_DIR: profileConfigDir } : {}),
       CLAUDE_CODE_ENABLE_TASKS: '1',
       CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING: '1',
       // Desktop must fail stuck provider streams instead of leaving the UI running forever.
@@ -1306,8 +1330,7 @@ export class ConversationService {
       return true
     }
 
-    const configDir =
-      process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude')
+    const configDir = this.getConfigDir()
     const ccHahaDir = path.join(configDir, 'cc-haha')
     const providersIndexPath = path.join(ccHahaDir, 'providers.json')
     const settingsPath = path.join(ccHahaDir, 'settings.json')
@@ -1361,8 +1384,7 @@ export class ConversationService {
       return false
     }
 
-    const configDir =
-      process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude')
+    const configDir = this.getConfigDir()
     const settingsPath = path.join(configDir, 'cc-haha', 'settings.json')
     try {
       const raw = fs.readFileSync(settingsPath, 'utf-8')
@@ -1408,10 +1430,7 @@ export class ConversationService {
   }
 
   private clearStaleLock(sessionId: string): boolean {
-    const lockDir = path.join(
-      process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'),
-      '.lock',
-    )
+    const lockDir = path.join(this.getConfigDir(), '.lock')
     const lockFile = path.join(lockDir, sessionId)
     if (!fs.existsSync(lockFile)) {
       return false
@@ -1696,7 +1715,7 @@ export class ConversationService {
     }
 
     const uploadDir = path.join(
-      process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'),
+      this.getConfigDir(),
       'uploads',
       sessionId,
     )

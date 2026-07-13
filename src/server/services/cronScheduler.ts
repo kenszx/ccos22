@@ -193,8 +193,18 @@ export function cronMatches(cronExpr: string, date: Date): boolean {
 type RunsFile = { runs: TaskRun[] }
 
 function getLogFilePath(): string {
-  const configDir =
-    process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude')
+  let configDir: string
+  if (process.env.CLAUDE_CONFIG_DIR) {
+    configDir = process.env.CLAUDE_CONFIG_DIR
+  } else {
+    try {
+      const { getProfileConfigHomeDir } =
+        require('../../utils/profileEngine.js') as typeof import('../../utils/profileEngine.js')
+      configDir = getProfileConfigHomeDir()
+    } catch {
+      configDir = path.join(os.homedir(), '.claude')
+    }
+  }
   return path.join(configDir, 'scheduled_tasks_log.json')
 }
 
@@ -751,7 +761,14 @@ export class CronScheduler {
   }
 
   private getConfigDir(): string {
-    return process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude')
+    if (process.env.CLAUDE_CONFIG_DIR) return process.env.CLAUDE_CONFIG_DIR
+    try {
+      const { getProfileConfigHomeDir } =
+        require('../../utils/profileEngine.js') as typeof import('../../utils/profileEngine.js')
+      return getProfileConfigHomeDir()
+    } catch {
+      return path.join(os.homedir(), '.claude')
+    }
   }
 
   private shouldStripInheritedProviderEnv(providerId?: string | null): boolean {

@@ -11,10 +11,10 @@ import {
   listProfiles,
   createProfile,
   deleteProfile,
-  switchProfile,
   getActiveProfile,
   type ProfileEntry,
 } from '../../utils/profileEngine.js'
+import { profileSwitchCoordinator } from '../services/profileSwitchCoordinator.js'
 import { ApiError, errorResponse } from '../middleware/errorHandler.js'
 
 export async function handleProfilesApi(
@@ -52,18 +52,12 @@ export async function handleProfilesApi(
       if (!body.name || typeof body.name !== 'string') {
         throw ApiError.badRequest('Missing "name" in request body')
       }
-      const newPath = switchProfile(body.name as string)
-      // Clear caches that depend on the profile path
-      try {
-        const { getClaudeConfigHomeDir } = require('../../utils/envUtils.js') as typeof import('../../utils/envUtils.js')
-        const { getAgentDefinitionsWithOverrides } = require('../../tools/AgentTool/loadAgentsDir.js') as typeof import('../../tools/AgentTool/loadAgentsDir.js')
-        const { H5AccessService } = require('../../services/h5AccessService.js') as typeof import('../../services/h5AccessService.js')
-        getClaudeConfigHomeDir.cache.clear?.()
-        getAgentDefinitionsWithOverrides.cache.clear?.()
-        const h5 = new H5AccessService()
-        h5.clearTokenCache()
-      } catch { /* caches may not be importable from API context */ }
-      return Response.json({ path: newPath, active: body.name })
+
+      // 使用协调器执行完整切换（停止 session、断开连接、切换目录、重启服务）
+      await profileSwitchCoordinator.switchProfile(body.name as string)
+
+      const active = getActiveProfile()
+      return Response.json({ active: active.name })
     }
 
     if (req.method === 'DELETE' && sub) {
