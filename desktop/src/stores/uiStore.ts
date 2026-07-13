@@ -74,6 +74,7 @@ export type SettingsTab =
   | 'computerUse'
   | 'trace'
   | 'diagnostics'
+  | 'workspaces'
   | 'about'
 
 type ActiveView = 'code' | 'scheduled' | 'terminal' | 'history' | 'settings'

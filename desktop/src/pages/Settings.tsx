@@ -214,6 +214,7 @@ export function Settings() {
         <div className="w-[180px] border-r border-[var(--color-border)] py-3 flex-shrink-0 flex flex-col">
           <div className="flex-1">
             <TabButton icon="dns" label={t('settings.tab.providers')} active={activeTab === 'providers'} onClick={() => setActiveTab('providers')} />
+            <TabButton icon="dashboard" label={'Workspaces'} active={activeTab === 'workspaces'} onClick={() => setActiveTab('workspaces')} />
             <TabButton icon="tune" label={t('settings.tab.general')} active={activeTab === 'general'} onClick={() => setActiveTab('general')} />
             <TabButton icon="qr_code_2" label={t('settings.tab.h5Access')} active={activeTab === 'h5Access'} onClick={() => setActiveTab('h5Access')} />
             <TabButton icon="chat" label={t('settings.tab.adapters')} active={activeTab === 'adapters'} onClick={() => setActiveTab('adapters')} />
@@ -236,6 +237,7 @@ export function Settings() {
         {/* Tab content; trace embeds a full-bleed page that manages its own scroll */}
         <div className={activeTab === 'trace' ? 'flex-1 flex min-h-0 flex-col overflow-hidden' : 'flex-1 overflow-y-auto px-8 py-6'}>
           {activeTab === 'providers' && <ProviderSettings />}
+          {activeTab === 'workspaces' && <WorkspaceSettings />}
           {activeTab === 'activity' && <ActivitySettings />}
           {activeTab === 'general' && <GeneralSettings />}
           {activeTab === 'h5Access' && <H5AccessSettings />}
@@ -2014,6 +2016,114 @@ function ProviderFormModal({ open, onClose, mode, provider, presets }: ProviderF
   )
 }
 
+
+// ─── Workspace Settings ────────────────────────────────────
+
+function WorkspaceSettings() {
+  const sessions = useSessionStore((s) => s.sessions)
+  const activeSessionId = useSessionStore((s) => s.activeSessionId)
+  const [workspaces, setWorkspaces] = useState<Array<{ path: string; name: string; sessionCount: number }>>([])
+
+  useEffect(() => {
+    // Group sessions by workspace directory
+    const workspaceMap = new Map<string, { sessions: typeof sessions }>()
+    for (const s of sessions) {
+      const dir = s.workDir || 'default'
+      const existing = workspaceMap.get(dir)
+      if (existing) {
+        existing.sessions.push(s)
+      } else {
+        workspaceMap.set(dir, { sessions: [s] })
+      }
+    }
+    setWorkspaces(
+      Array.from(workspaceMap.entries()).map(([path, data]) => ({
+        path,
+        name: path === 'default' ? 'Default Workspace' : path.split(/[/\\]/).pop() || path,
+        sessionCount: data.sessions.length,
+      })).sort((a, b) => b.sessionCount - a.sessionCount)
+    )
+  }, [sessions])
+
+  return (
+    <div className="w-full min-w-0">
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-container-low)] overflow-hidden mb-6">
+        <div className="grid gap-4 px-5 py-5 min-w-0 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] xl:items-end">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="material-symbols-outlined text-[22px] text-[var(--color-brand)]">dashboard</span>
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Workspaces</h3>
+            </div>
+            <p className="text-sm leading-6 text-[var(--color-text-secondary)] max-w-3xl">
+              Each workspace has isolated settings, sessions, memory, and providers. Use separate workspaces for different projects or contexts.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 min-w-0 sm:grid-cols-2">
+            <SummaryCard label="Workspaces" value={String(workspaces.length)} icon="dashboard" />
+            <SummaryCard label="Active Sessions" value={String(sessions.length)} icon="chat" />
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-container-low)]">
+          <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Workspace List</h4>
+        </div>
+        {workspaces.length === 0 ? (
+          <div className="text-center py-12 px-4">
+            <span className="material-symbols-outlined text-[40px] text-[var(--color-text-tertiary)] mb-3 block">dashboard</span>
+            <p className="text-sm text-[var(--color-text-secondary)] mb-1">No workspaces found</p>
+            <p className="text-xs text-[var(--color-text-tertiary)]">Start a new session in a different directory to create a workspace.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[var(--color-border)]">
+            {workspaces.map((ws) => (
+              <div key={ws.path} className="flex items-center justify-between px-5 py-3 hover:bg-[var(--color-surface-hover)] transition-colors">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="material-symbols-outlined text-[20px] text-[var(--color-brand)]">folder</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">{ws.name}</p>
+                    <p className="text-xs text-[var(--color-text-tertiary)] truncate">{ws.path}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-[var(--color-text-tertiary)]">
+                  <span>{ws.sessionCount} session{ws.sessionCount !== 1 ? 's' : ''}</span>
+                  {ws.path === (sessions.find(s => s.id === activeSessionId)?.workDir || 'default') && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--color-brand-container)]/15 text-[var(--color-brand)] text-[11px] font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand)]" />
+                      Active
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-container-low)] overflow-hidden">
+        <div className="px-5 py-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="material-symbols-outlined text-[18px] text-[var(--color-text-secondary)]">info</span>
+            <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">How Workspaces Work</h4>
+          </div>
+          <div className="text-sm text-[var(--color-text-secondary)] space-y-2">
+            <p>Each workspace is a directory. CCOS stores <code className="px-1.5 py-0.5 rounded bg-[var(--color-surface)] text-xs">.claude/</code> settings, sessions, and memory inside that directory.</p>
+            <p>To switch workspace:</p>
+            <ul className="list-disc pl-5 space-y-1 text-xs">
+              <li><b>Desktop</b>: Open CCOS from a different folder to start a new workspace</li>
+              <li><b>CLI</b>: <code className="px-1.5 py-0.5 rounded bg-[var(--color-surface)] text-xs">claude-haha --cwd /path/to/project</code></li>
+              <li><b>H5</b>: Create a session in a different project directory</li>
+            </ul>
+            <p className="text-[var(--color-text-tertiary)] text-xs mt-3">
+              Isolated per workspace: settings.json, CLAUDE.md, agents/, skills/, memory/, scheduled_tasks.json, providers, MCP servers.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+}
 
 // ─── General Settings ──────────────────────────────────────
 
