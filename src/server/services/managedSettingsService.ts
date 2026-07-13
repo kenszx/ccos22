@@ -12,11 +12,13 @@ export class ManagedSettingsService {
   private getConfigDir(): string {
     if (process.env.CLAUDE_CONFIG_DIR) return process.env.CLAUDE_CONFIG_DIR
     try {
+      // Profile engine already returns the per-profile config home dir
       const { getProfileConfigHomeDir } =
         require('../../utils/profileEngine.js') as typeof import('../../utils/profileEngine.js')
-      return path.join(getProfileConfigHomeDir(), 'cc-haha')
+      return getProfileConfigHomeDir()
     } catch {
-      return path.join(os.homedir(), '.claude', 'cc-haha')
+      // Legacy fallback: ~/.claude
+      return path.join(os.homedir(), '.claude')
     }
   }
 
