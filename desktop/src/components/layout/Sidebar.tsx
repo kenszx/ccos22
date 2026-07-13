@@ -43,6 +43,8 @@ type ProjectGroup = {
 // ─── Profile Switcher ──────────────────────────────────────
 
 function ProfileSwitcher({ expanded }: { expanded: boolean }) {
+  const isDesktop = isDesktopRuntime
+
   const [open, setOpen] = useState(false)
   const [profiles, setProfiles] = useState<Array<{ name: string; displayName: string; icon?: string; active: boolean }>>([])
   const [activeName, setActiveName] = useState('Default')
@@ -96,9 +98,9 @@ function ProfileSwitcher({ expanded }: { expanded: boolean }) {
     <div ref={ref} className="relative">
       <div className={`flex items-center ${expanded ? 'gap-2.5' : 'justify-center'}`}>
         <button
-          onClick={() => setOpen(!open)}
-          className="flex items-center gap-2.5 rounded-xl p-1.5 transition-colors hover:bg-[var(--color-surface-hover)]"
-          title={`Profile: ${activeName}`}
+          onClick={() => isDesktop && setOpen(!open)}
+          className={`flex items-center gap-2.5 rounded-xl p-1.5 ${isDesktop ? 'transition-colors hover:bg-[var(--color-surface-hover)] cursor-pointer' : 'cursor-default'}`}
+          title={isDesktop ? `Profile: ${activeName}` : `${activeName} (H5 token locked)`}
         >
           <div className="h-8 w-8 flex-shrink-0 rounded-full bg-[var(--color-brand)] flex items-center justify-center text-sm font-bold text-white">
             {firstIcon}
@@ -109,13 +111,15 @@ function ProfileSwitcher({ expanded }: { expanded: boolean }) {
           >
             {activeName}
           </span>
-          <ChevronDown
-            className={`sidebar-copy ${expanded ? 'sidebar-copy--visible' : 'sidebar-copy--hidden'} h-3.5 w-3.5 text-[var(--color-text-tertiary)] transition-transform ${open ? 'rotate-180' : ''}`}
-          />
+          {isDesktop && (
+            <ChevronDown
+              className={`sidebar-copy ${expanded ? 'sidebar-copy--visible' : 'sidebar-copy--hidden'} h-3.5 w-3.5 text-[var(--color-text-tertiary)] transition-transform ${open ? 'rotate-180' : ''}`}
+            />
+          )}
         </button>
       </div>
 
-      {open && (
+      {isDesktop && open && (
         <div className={`absolute ${expanded ? 'left-0 top-full mt-1 w-56' : 'left-full top-0 ml-2 w-56'} z-50 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg overflow-hidden`}>
           <div className="px-3 py-2 border-b border-[var(--color-border)]">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-tertiary)]">Profiles</p>
