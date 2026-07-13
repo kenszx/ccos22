@@ -10,7 +10,14 @@ export class ManagedSettingsService {
   private static writeLocks = new Map<string, Promise<void>>()
 
   private getConfigDir(): string {
-    return process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude')
+    if (process.env.CLAUDE_CONFIG_DIR) return process.env.CLAUDE_CONFIG_DIR
+    try {
+      const { getProfileConfigHomeDir } =
+        require('../../utils/profileEngine.js') as typeof import('../../utils/profileEngine.js')
+      return path.join(getProfileConfigHomeDir(), 'cc-haha')
+    } catch {
+      return path.join(os.homedir(), '.claude', 'cc-haha')
+    }
   }
 
   private getSettingsPath(): string {

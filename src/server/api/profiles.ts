@@ -53,6 +53,13 @@ export async function handleProfilesApi(
         throw ApiError.badRequest('Missing "name" in request body')
       }
       const newPath = switchProfile(body.name as string)
+      // Clear caches that depend on the profile path
+      try {
+        const { getClaudeConfigHomeDir } = require('../../utils/envUtils.js') as typeof import('../../utils/envUtils.js')
+        const { getAgentDefinitionsWithOverrides } = require('../../tools/AgentTool/loadAgentsDir.js') as typeof import('../../tools/AgentTool/loadAgentsDir.js')
+        getClaudeConfigHomeDir.cache.clear?.()
+        getAgentDefinitionsWithOverrides.cache.clear?.()
+      } catch { /* caches may not be importable from API context */ }
       return Response.json({ path: newPath, active: body.name })
     }
 

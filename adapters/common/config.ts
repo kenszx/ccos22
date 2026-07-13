@@ -85,8 +85,14 @@ export type AdapterPlatformConfig =
   | WhatsAppConfig
 
 function getConfigPath(): string {
-  const configDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude')
-  return path.join(configDir, 'adapters.json')
+  if (process.env.CLAUDE_CONFIG_DIR) return path.join(process.env.CLAUDE_CONFIG_DIR, 'adapters.json')
+  try {
+    const { getProfileConfigHomeDir } =
+      require('../../src/utils/profileEngine.js') as typeof import('../../src/utils/profileEngine.js')
+    return path.join(getProfileConfigHomeDir(), 'adapters.json')
+  } catch {
+    return path.join(os.homedir(), '.claude', 'adapters.json')
+  }
 }
 
 function loadFile(): Record<string, any> {
