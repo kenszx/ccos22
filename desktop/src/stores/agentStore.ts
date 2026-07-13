@@ -12,7 +12,7 @@ type AgentStore = {
   selectedAgentReturnTab: AgentDetailReturnTab
   isCreating: boolean
 
-  fetchAgents: (cwd?: string) => Promise<void>
+  fetchAgents: (cwd?: string, nocache?: boolean) => Promise<void>
   selectAgent: (
     agent: AgentDefinition | null,
     returnTab?: AgentDetailReturnTab,
