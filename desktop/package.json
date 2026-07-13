@@ -1,7 +1,7 @@
 {
   "name": "ccos-pro-desktop",
   "private": true,
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "CCOS Pro — 多功能可扩展的综合型 Agent 系统桌面端",
   "homepage": "https://github.com/kenszx/ccos-pro",
   "author": {
