@@ -21,11 +21,18 @@ export type AgentDefinition = {
 }
 
 export class AgentService {
-  /** Agent 定义目录 */
+  /** Agent 定义目录（使用 CCOS Profile 路径） */
   private getAgentsDir(): string {
-    const configDir =
-      process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude')
-    return path.join(configDir, 'agents')
+    if (process.env.CLAUDE_CONFIG_DIR) {
+      return path.join(process.env.CLAUDE_CONFIG_DIR, 'agents')
+    }
+    try {
+      const { getProfileConfigHomeDir } =
+        require('../../utils/profileEngine.js') as typeof import('../../utils/profileEngine.js')
+      return path.join(getProfileConfigHomeDir(), 'agents')
+    } catch {
+      return path.join(os.homedir(), '.claude', 'agents')
+    }
   }
 
   // ---------------------------------------------------------------------------

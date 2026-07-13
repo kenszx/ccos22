@@ -4098,7 +4098,7 @@ function AgentsSettings() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 min-w-0 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 min-w-0 sm:grid-cols-3">
                 <SummaryCard
                   label={t('settings.agents.summary.totalAgents')}
                   value={String(allAgents.length)}
@@ -4113,17 +4113,14 @@ function AgentsSettings() {
                   label={t('settings.agents.summary.sources')}
                   value={String(sourceCount)}
                   icon="layers"
+                  className="col-span-2 sm:col-span-1"
                 />
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  disabled={isCreating}
-                  className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[var(--color-brand)] bg-[var(--color-brand-container)]/10 hover:bg-[var(--color-brand-container)]/20 transition-colors py-3 px-4 text-sm font-medium text-[var(--color-brand)] disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined text-[18px]">
-                    {isCreating ? 'hourglass_top' : 'add'}
-                  </span>
+              </div>
+              <div className="xl:self-end">
+                <Button size="sm" onClick={() => setShowCreateModal(true)} disabled={isCreating}>
+                  <span className="material-symbols-outlined text-[16px]">add</span>
                   {'Create Agent'}
-                </button>
+                </Button>
               </div>
             </div>
           </section>
