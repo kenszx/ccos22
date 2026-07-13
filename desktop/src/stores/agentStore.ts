@@ -30,10 +30,10 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   selectedAgentReturnTab: 'agents',
   isCreating: false,
 
-  fetchAgents: async (cwd) => {
+  fetchAgents: async (cwd, nocache = false) => {
     set({ isLoading: true, error: null })
     try {
-      const { activeAgents, allAgents } = await agentsApi.list(cwd)
+      const { activeAgents, allAgents } = await agentsApi.list(cwd, nocache)
       set({ activeAgents, allAgents, isLoading: false })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load agents'
@@ -51,11 +51,8 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     set({ isCreating: true, error: null })
     try {
       await agentsApi.create(input)
-      // Force refresh: fetch twice to ensure server cache is cleared
-      await get().fetchAgents(cwd)
-      // Small delay for filesystem sync, then refresh again
-      await new Promise(r => setTimeout(r, 300))
-      await get().fetchAgents(cwd)
+      // nocache=true forces server to bypass memoize and re-read filesystem
+      await get().fetchAgents(cwd, true)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create agent'
       set({ error: message })

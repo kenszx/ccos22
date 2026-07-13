@@ -59,6 +59,9 @@ async function handleAgents(
 
   // ── GET /api/agents ──────────────────────────────────────────────────
   if (method === 'GET' && !agentName) {
+    if (url.searchParams.get('nocache') === '1') {
+      clearAgentDefinitionsCache()
+    }
     const cwd = url.searchParams.get('cwd') || getCwd()
     const { activeAgents, allAgents } = await getAgentDefinitionsWithOverrides(cwd)
     const resolvedAgents = resolveAgentOverrides(allAgents, activeAgents)

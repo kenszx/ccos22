@@ -38,9 +38,12 @@ export type CreateAgentInput = {
 }
 
 export const agentsApi = {
-  list: (cwd?: string) => {
-    const query = cwd ? `?cwd=${encodeURIComponent(cwd)}` : ''
-    return api.get<AgentListResponse>(`/api/agents${query}`)
+  list: (cwd?: string, nocache?: boolean) => {
+    const params = new URLSearchParams()
+    if (cwd) params.set('cwd', cwd)
+    if (nocache) params.set('nocache', '1')
+    const qs = params.toString()
+    return api.get<AgentListResponse>(`/api/agents${qs ? '?' + qs : ''}`)
   },
   create: (input: CreateAgentInput) => {
     return api.post<{ ok: boolean }>('/api/agents', input)
