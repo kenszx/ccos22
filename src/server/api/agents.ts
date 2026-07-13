@@ -96,7 +96,19 @@ async function handleAgents(
       color: body.color as string | undefined,
     })
     clearAgentDefinitionsCache()
-    return Response.json({ ok: true }, { status: 201 })
+    // Return the created agent directly so the UI can insert it without re-fetching
+    const created = {
+      agentType: body.name as string,
+      description: (body.description as string) || '',
+      model: (body.model as string) || 'inherit',
+      modelDisplay: (body.model as string) || 'inherit',
+      tools: (body.tools as string[]) || ['Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep'],
+      systemPrompt: (body.systemPrompt as string) || '',
+      color: body.color as string | undefined,
+      source: 'userSettings' as const,
+      isActive: true,
+    }
+    return Response.json({ ok: true, agent: created }, { status: 201 })
   }
 
   // ── PUT /api/agents/:name ────────────────────────────────────────────

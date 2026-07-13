@@ -4045,7 +4045,7 @@ function AgentsSettings() {
         description: newAgentDesc.trim() || undefined,
         model: newAgentModel.trim() || undefined,
         systemPrompt: newAgentSystemPrompt.trim() || undefined,
-      }, currentWorkDir)
+      })
       setShowCreateModal(false)
       setNewAgentName('')
       setNewAgentDesc('')
@@ -4149,7 +4149,15 @@ function AgentsSettings() {
               const group = groupedAgents[source]
               if (!group?.length) return null
 
-              const sourceLabel = t(`settings.agents.source.${source}`)
+              const sourceLabel = {
+                userSettings: 'User Agents',
+                projectSettings: 'Project Agents',
+                localSettings: 'Local Agents',
+                policySettings: 'Managed Agents',
+                plugin: 'Plugin Agents',
+                flagSettings: 'CLI Agents',
+                'built-in': 'Built-in Agents',
+              }[source] || source
               return (
                 <section
                   key={source}

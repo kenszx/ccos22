@@ -17,7 +17,7 @@ type AgentStore = {
     agent: AgentDefinition | null,
     returnTab?: AgentDetailReturnTab,
   ) => void
-  createAgent: (input: CreateAgentInput, cwd?: string) => Promise<void>
+  createAgent: (input: CreateAgentInput) => Promise<void>
   deleteAgent: (name: string, cwd?: string) => Promise<void>
 }
 
@@ -47,12 +47,15 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       selectedAgentReturnTab: agent ? returnTab : 'agents',
     }),
 
-  createAgent: async (input, cwd) => {
+  createAgent: async (input) => {
     set({ isCreating: true, error: null })
     try {
-      await agentsApi.create(input)
-      // nocache=true forces server to bypass memoize and re-read filesystem
-      await get().fetchAgents(cwd, true)
+      const { agent } = await agentsApi.create(input)
+      // Insert the returned agent directly into the list — no re-fetch needed
+      set(state => ({
+        allAgents: [...state.allAgents, agent],
+        activeAgents: [...state.activeAgents, agent],
+      }))
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create agent'
       set({ error: message })

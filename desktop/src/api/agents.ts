@@ -46,7 +46,7 @@ export const agentsApi = {
     return api.get<AgentListResponse>(`/api/agents${qs ? '?' + qs : ''}`)
   },
   create: (input: CreateAgentInput) => {
-    return api.post<{ ok: boolean }>('/api/agents', input)
+    return api.post<{ ok: boolean; agent: AgentDefinition }>('/api/agents', input)
   },
   update: (name: string, input: Partial<CreateAgentInput>) => {
     return api.put<{ agent: AgentDefinition }>(
