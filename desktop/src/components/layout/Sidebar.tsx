@@ -46,6 +46,9 @@ function ProfileSwitcher({ expanded }: { expanded: boolean }) {
   const [open, setOpen] = useState(false)
   const [profiles, setProfiles] = useState<Array<{ name: string; displayName: string; icon?: string; active: boolean }>>([])
   const [activeName, setActiveName] = useState('Default')
+  const [showCreate, setShowCreate] = useState(false)
+  const [newProfileName, setNewProfileName] = useState('')
+  const [newProfileDisplay, setNewProfileDisplay] = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -136,25 +139,58 @@ function ProfileSwitcher({ expanded }: { expanded: boolean }) {
             ))}
           </div>
           <div className="border-t border-[var(--color-border)] py-1">
-            <button
-              onClick={async () => {
-                const name = prompt('Profile name (e.g. "work", "education"):')
-                if (!name) return
-                const display = prompt('Display name (e.g. "Work", "Education"):') || name
-                try {
-                  const { profilesApi } = await import('../../api/profiles')
-                  await profilesApi.create(name, display)
-                  const data = await profilesApi.list()
-                  setProfiles(data.profiles)
-                } catch (e) {
-                  alert('Failed to create profile: ' + (e instanceof Error ? e.message : String(e)))
-                }
-              }}
-              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
-            >
-              <span className="material-symbols-outlined text-[16px]">add</span>
-              New Profile
-            </button>
+            {showCreate ? (
+              <div className="px-3 py-2 flex flex-col gap-2">
+                <input
+                  className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)]"
+                  placeholder="Profile ID (e.g. work)"
+                  value={newProfileName}
+                  onChange={(e) => setNewProfileName(e.currentTarget.value)}
+                  autoFocus
+                />
+                <input
+                  className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)]"
+                  placeholder="Display name (e.g. Work)"
+                  value={newProfileDisplay}
+                  onChange={(e) => setNewProfileDisplay(e.currentTarget.value)}
+                />
+                <div className="flex gap-1">
+                  <button
+                    onClick={async () => {
+                      if (!newProfileName.trim()) return
+                      try {
+                        const { profilesApi } = await import('../../api/profiles')
+                        await profilesApi.create(newProfileName.trim(), newProfileDisplay.trim() || newProfileName.trim())
+                        const data = await profilesApi.list()
+                        setProfiles(data.profiles)
+                        setShowCreate(false)
+                        setNewProfileName('')
+                        setNewProfileDisplay('')
+                      } catch (e) {
+                        alert(e instanceof Error ? e.message : 'Failed')
+                      }
+                    }}
+                    className="flex-1 rounded-md bg-[var(--color-brand)] px-2 py-1 text-xs font-medium text-white hover:opacity-90"
+                  >
+                    Create
+                  </button>
+                  <button
+                    onClick={() => { setShowCreate(false); setNewProfileName(''); setNewProfileDisplay('') }}
+                    className="rounded-md px-2 py-1 text-xs text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowCreate(true)}
+                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
+              >
+                <span className="material-symbols-outlined text-[16px]">add</span>
+                New Profile
+              </button>
+            )}
             <button
               onClick={() => {
                 setOpen(false)

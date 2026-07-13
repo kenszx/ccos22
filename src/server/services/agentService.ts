@@ -81,16 +81,30 @@ export class AgentService {
       throw ApiError.badRequest('Agent name is required')
     }
 
-    const existing = await this.findAgentFile(agent.name)
-    if (existing) {
-      throw ApiError.conflict(`Agent already exists: ${agent.name}`)
-    }
-
     const dir = this.getAgentsDir()
     await fs.mkdir(dir, { recursive: true })
 
-    const filePath = path.join(dir, `${this.sanitizeName(agent.name)}.md`)
-    await this.writeAgentFile(filePath, agent)
+    const safeName = this.sanitizeName(agent.name)
+    const mdPath = path.join(dir, `${safeName}.md`)
+    const yamlPath = path.join(dir, `${safeName}.yaml`)
+
+    // Check for .md first (new format)
+    try {
+      await fs.access(mdPath)
+      throw ApiError.conflict(`Agent already exists: ${agent.name}`)
+    } catch (e) {
+      if (e instanceof ApiError) throw e
+      // .md doesn't exist — proceed
+    }
+
+    // Migrate: delete old .yaml file if it exists (from before the format change)
+    try {
+      await fs.unlink(yamlPath)
+    } catch {
+      // No old .yaml to clean up — fine
+    }
+
+    await this.writeAgentFile(mdPath, agent)
   }
 
   /** 更新 Agent */
