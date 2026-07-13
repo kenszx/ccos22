@@ -4067,7 +4067,7 @@ function AgentsSettings() {
   if (selectedAgent) {
     return (
       <div className="w-full min-w-0">
-        <AgentDetailView agent={selectedAgent} onBack={handleAgentBack} />
+        <AgentDetailView agent={selectedAgent} onBack={handleAgentBack} onDelete={selectedAgent.source !== 'built-in' ? () => setDeleteConfirm(selectedAgent) : undefined} />
       </div>
     )
   }
@@ -4351,9 +4351,10 @@ function AgentsSettings() {
   )
 }
 
-function AgentDetailView({ agent, onBack }: { agent: AgentDefinition; onBack: () => void }) {
+function AgentDetailView({ agent, onBack, onDelete }: { agent: AgentDefinition; onBack: () => void; onDelete?: () => void }) {
   const t = useTranslation()
   const sourceLabel = t(`settings.agents.source.${agent.source}`)
+  const isDeletable = agent.source !== 'built-in'
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 min-w-0">
@@ -4496,6 +4497,21 @@ function AgentDetailView({ agent, onBack }: { agent: AgentDefinition; onBack: ()
           </div>
         </div>
       </section>
+
+      {isDeletable && onDelete && (
+        <div className="rounded-2xl border border-[var(--color-error-container)] bg-[var(--color-error-container)]/5 px-5 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-[var(--color-error)]">Delete this agent</p>
+              <p className="text-xs text-[var(--color-text-tertiary)] mt-1">This removes the agent definition file.</p>
+            </div>
+            <Button size="sm" onClick={onDelete}>
+              <span className="material-symbols-outlined text-[16px]">delete</span>
+              {'Delete'}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
