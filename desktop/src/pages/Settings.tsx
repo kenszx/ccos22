@@ -2066,8 +2066,14 @@ function WorkspaceSettings() {
       </section>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
-        <div className="px-5 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-container-low)]">
+        <div className="px-5 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-container-low)] flex items-center justify-between">
           <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Workspace List</h4>
+          <Button size="sm" onClick={() => {
+            alert('Create a new workspace by starting CCOS from a different directory:\n\nDesktop: Open CCOS from the new folder\nCLI: claude-haha --cwd /path/to/project\n\nOr create a new Profile (top-left avatar menu) for complete data isolation.')
+          }}>
+            <span className="material-symbols-outlined text-[16px]">add</span>
+            {'New Workspace'}
+          </Button>
         </div>
         {workspaces.length === 0 ? (
           <div className="text-center py-12 px-4">

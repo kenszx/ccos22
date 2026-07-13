@@ -89,7 +89,7 @@ export class AgentService {
     const dir = this.getAgentsDir()
     await fs.mkdir(dir, { recursive: true })
 
-    const filePath = path.join(dir, `${this.sanitizeName(agent.name)}.yaml`)
+    const filePath = path.join(dir, `${this.sanitizeName(agent.name)}.md`)
     await this.writeAgentFile(filePath, agent)
   }
 
@@ -130,9 +130,8 @@ export class AgentService {
     const dir = this.getAgentsDir()
     const safeName = this.sanitizeName(name)
     const candidates = [
-      path.join(dir, `${safeName}.yaml`),
-      path.join(dir, `${safeName}.yml`),
       path.join(dir, `${safeName}.md`),
+      path.join(dir, `${safeName}.yaml`),
     ]
 
     for (const candidate of candidates) {

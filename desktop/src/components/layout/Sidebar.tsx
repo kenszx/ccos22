@@ -135,6 +135,39 @@ function ProfileSwitcher({ expanded }: { expanded: boolean }) {
               </button>
             ))}
           </div>
+          <div className="border-t border-[var(--color-border)] py-1">
+            <button
+              onClick={async () => {
+                const name = prompt('Profile name (e.g. "work", "education"):')
+                if (!name) return
+                const display = prompt('Display name (e.g. "Work", "Education"):') || name
+                try {
+                  const { profilesApi } = await import('../../api/profiles')
+                  await profilesApi.create(name, display)
+                  const data = await profilesApi.list()
+                  setProfiles(data.profiles)
+                } catch (e) {
+                  alert('Failed to create profile: ' + (e instanceof Error ? e.message : String(e)))
+                }
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px]">add</span>
+              New Profile
+            </button>
+            <button
+              onClick={() => {
+                setOpen(false)
+                const { useUIStore } = require('../../stores/uiStore')
+                useUIStore.getState().setActiveView('settings')
+                useUIStore.getState().setActiveSettingsTab('workspaces')
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px]">settings</span>
+              Manage Profiles
+            </button>
+          </div>
         </div>
       )}
     </div>
