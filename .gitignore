@@ -80,3 +80,5 @@ CLAUDE.md
 .mavis/
 .opencode/
 graphify-out/
+electron-builder-local.json
+yarn.lock
